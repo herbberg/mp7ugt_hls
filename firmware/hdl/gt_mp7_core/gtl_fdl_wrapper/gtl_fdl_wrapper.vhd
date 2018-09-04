@@ -1,20 +1,6 @@
---------------------------------------------------------------------------------
--- Synthesizer : ISE 14.6
--- Platform    : Linux Ubuntu 10.04
--- Targets     : Synthese
---------------------------------------------------------------------------------
--- This work is held in copyright as an unpublished work by HEPHY (Institute
--- of High Energy Physics) All rights reserved.  This work may not be used
--- except by authorized licensees of HEPHY. This work is the
--- confidential information of HEPHY.
---------------------------------------------------------------------------------
--- $HeadURL: svn://heros.hephy.at/GlobalTriggerUpgrade/firmware/gt_mp7/branches/hb_algo_2_buffer/src/gt_mp7_core/gtl_fdl_wrapper/gtl_fdl_wrapper.vhd $
--- $Date: 2015-08-14 10:57:16 +0200 (Fre, 14 Aug 2015) $
--- $Author: bergauer $
--- $Revision: 4148 $
---------------------------------------------------------------------------------
-
 -- Version-history:
+
+-- HB 2018-09-04: version for HLS.
 -- HB 2016-11-17: inserted port "finor_preview_2_mezz_lemo" for "prescaler preview" in monitoring.
 -- HB 2016-09-16: removed algo_after_finor_mask_rop, not used anymore in read-out record. Inserted new esums.
 -- HB 2016-09-01: added BGo "test-enable" not synchronized (!) occures at bx=~3300 (used to suppress counting algos caused by calibration trigger at bx=3490) for fdl_module.
@@ -73,7 +59,7 @@ end gtl_fdl_wrapper;
 
 architecture rtl of gtl_fdl_wrapper is
 
-    signal algo : std_logic_vector(nr_algos-1 downto 0);
+    signal algo : std_logic_vector(MAX_NR_ALGOS-1 downto 0);
 
     signal eg_temp : calo_objects_array(0 to NR_EG_OBJECTS-1);
     signal jet_temp : calo_objects_array(0 to NR_JET_OBJECTS-1);
@@ -204,7 +190,7 @@ fdl_module_i: entity work.fdl_module
         veto_2_mezz_lemo  => veto_2_mezz_lemo,
         finor_w_veto_2_mezz_lemo  => finor_w_veto_2_mezz_lemo,
         local_finor_with_veto_o  => local_finor_with_veto_o,
-	algo_bx_mask_sim => (others => '1')  
+    algo_bx_mask_sim => (others => '1')  
     );
 
 end architecture rtl;
