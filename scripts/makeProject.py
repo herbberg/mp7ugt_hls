@@ -39,6 +39,8 @@ firmware_dir = os.path.abspath(os.path.join(scripts_dir, '..', 'firmware'))
 TARGET_PKG_TPL = os.path.join(firmware_dir, 'hdl', 'gt_mp7_top_pkg_tpl.vhd')
 TARGET_PKG = os.path.join(firmware_dir, 'hdl', 'gt_mp7_top_pkg.vhd')
 
+Tcl_addHlsIpCore = 'addHlsIpCore.tcl'
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser()
@@ -50,6 +52,8 @@ def parse_args():
     parser.add_argument('-p', '--path', metavar='<path>', default=DefaultFirmwareDir, type=os.path.abspath, help="fw build path")
     parser.add_argument('-m', '--menu', metavar='<menu>', required=True, type=os.path.abspath, help="path to L1Menu_ directory")
     parser.add_argument('-b', '--build', metavar='<version>', required=True, type=tb.build_t, help='menu build version (eg. 0x1001)')
+    parser.add_argument('--tclfile', default=Tcl_addHlsIpCore, help="file name tcl script for HLS IP core")
+    parser.add_argument('--hls', metavar='<path>', required=True, help='path to HLS IP')
     return parser.parse_args()
 
 def main():
@@ -90,6 +94,8 @@ def main():
     logging.info("menu modules: %s", modules)
     logging.info("build: 0x%s", args.build)
     logging.info("board type: %s", args.board)
+    logging.info("tcl name: %s", args.tclfile)
+    logging.info("HLS path: %s", args.hls)
 
     if not os.path.isdir(args.menu):
         raise RuntimeError("menu directory does not exist: {}".format(args.menu))
@@ -198,6 +204,28 @@ def main():
         # Run project manager
         subprocess.check_call(['python', 'ProjectManager.py', 'vivado', local_fw_dir, '-w', module_dir])
 
+        #
+        # Create TCL file for adding HLS IP core into Vivado IP catalog
+        #
+        os.chdir(module_dir)
+        #set_prop = "set_property ip_repo_paths %s", args.hls, "[current_project]\n"
+        hls_ip_file = open(args.tclfile,"w+")
+        hls_ip_file.write("open_project top/top.xpr\n")
+        hls_ip_file.write("set_property ip_repo_paths ")
+        hls_ip_file.write(args.hls)
+        hls_ip_file.write(" [current_project]\n")
+        hls_ip_file.write("update_ip_catalog\n")
+        hls_ip_file.write("create_ip -name algos -vendor HEPHY-CMS-L1GT -library hls -version 1.0 -module_name algos_0\n")
+        hls_ip_file.write("generate_target {instantiation_template} [get_files top/top.srcs/sources_1/ip/algos_0/algos_0.xci]\n")
+        hls_ip_file.write("generate_target all [get_files top/top.srcs/sources_1/ip/algos_0/algos_0.xci]\n")
+        hls_ip_file.write("catch { config_ip_cache -export [get_ips -all algos_0] }\n")
+        hls_ip_file.write("generate_target all [get_files top/top.srcs/sources_1/ip/algos_0/algos_0.xci] \n")
+        hls_ip_file.write("export_ip_user_files -of_objects [get_files top/top.srcs/sources_1/ip/algos_0/algos_0.xci] \n")
+        hls_ip_file.write("create_ip_run [get_files -of_objects [get_fileset sources_1] top/top.srcs/sources_1/ip/algos_0/algos_0.xci] \n")
+        hls_ip_file.write("launch_runs -jobs 14 algos_0_synth_1\n")
+        hls_ip_file.write("exit\n")
+        hls_ip_file.close()
+        
     # Go to build area root directory.
     os.chdir(mp7path)
     os.chdir(build_area_dir)

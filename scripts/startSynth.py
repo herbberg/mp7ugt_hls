@@ -27,11 +27,14 @@ def vivado_t(version):
         raise ValueError("not a xilinx vivado version: '{version}'".format(**locals()))
     return version
 
+Tcl_addHlsIpCore = 'addHlsIpCore.tcl'
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument('vivado', type=vivado_t, help="xilinx vivado version to run, eg. '2016.4'")
     parser.add_argument('config', type=os.path.abspath, help="build configuration file to read")
+    parser.add_argument('--tclfile', default=Tcl_addHlsIpCore, help="file name tcl script for HLS IP core")
     return parser.parse_args()
 
 def main():
@@ -74,7 +77,8 @@ def main():
         # module build directory inside build area
         builddir = os.path.join(buildarea, 'module_{i}'.format(**locals()))
         # command to be executed inside module screen session
-        command = 'bash -c "source {settings64}; cd {builddir}; make project && make bitfile"'.format(**locals())
+        #command = 'bash -c "source {settings64}; cd {builddir}; make project && make bitfile"'.format(**locals())
+        command = 'bash -c "source {settings64}; cd {builddir}; make project; vivado -mode batch -source {args.tclfile}; make bitfile"'.format(**locals())
         # run screen command
         logging.info("starting screen session '%s' for module %s ...", session, i)
         run_command('screen', '-dmS', session, command)
