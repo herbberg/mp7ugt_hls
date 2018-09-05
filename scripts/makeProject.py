@@ -218,7 +218,7 @@ def main():
         hls_ip_file.write(args.hls)
         hls_ip_file.write(" [current_project]\n")
         hls_ip_file.write("update_ip_catalog\n")
-        hls_ip_file.write("create_ip -name algos -vendor HEPHY-CMS-L1GT -library hls -version 1.0 -module_name algos_0\n")
+        hls_ip_file.write("create_ip -name algos -library hls -version 1.0 -module_name algos_0\n")
         hls_ip_file.write("generate_target {instantiation_template} [get_files top/top.srcs/sources_1/ip/algos_0/algos_0.xci]\n")
         hls_ip_file.write("generate_target all [get_files top/top.srcs/sources_1/ip/algos_0/algos_0.xci]\n")
         hls_ip_file.write("catch { config_ip_cache -export [get_ips -all algos_0] }\n")
