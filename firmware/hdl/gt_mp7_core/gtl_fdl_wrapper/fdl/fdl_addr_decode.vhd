@@ -22,6 +22,9 @@ use work.ipbus.all;
 use work.math_pkg.ALL;
 use work.gt_mp7_core_pkg.all;
 use work.gtl_pkg.ALL;
+-- Constants from L1menu (HLS)
+use work.constants_pkg.ALL;
+
 
 package fdl_addr_decode is
 

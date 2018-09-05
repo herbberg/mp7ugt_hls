@@ -61,6 +61,9 @@ use ieee.std_logic_unsigned.ALL; -- for function "CONV_INTEGER"
 
 use work.ipbus.all;
 
+-- Constants from L1menu (HLS)
+use work.constants_pkg.ALL;
+
 use work.gtl_pkg.ALL;
 
 use work.gt_mp7_core_pkg.ALL;

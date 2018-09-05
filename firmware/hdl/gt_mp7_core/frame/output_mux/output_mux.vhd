@@ -31,6 +31,8 @@ use work.mp7_ttc_decl.all;
 
 -- HB 2016-09-16: inserted for L1TM_UID_HASH and FW_UID_HASH
 use work.gtl_pkg.ALL;
+-- Constants from L1menu (HLS)
+use work.constants_pkg.ALL;
 
 entity output_mux is
     generic(

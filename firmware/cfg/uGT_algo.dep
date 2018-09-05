@@ -12,7 +12,7 @@ src gt_mp7_core/gt_mp7_core_pkg.vhd
 
 src gt_mp7_core/gtl_fdl_wrapper/gtl_fdl_wrapper.vhd
 #
-## HB 2016-11-16: gtl_module.vhd, gtl_pkg.vhd and algo_mapping_rop.vhd from gt_mp7_core/..
+src gt_mp7_core/gtl_fdl_wrapper/gtl/constants_pkg.vhd
 src gt_mp7_core/gtl_fdl_wrapper/gtl/gtl_pkg.vhd
 src gt_mp7_core/gtl_fdl_wrapper/gtl/gtl_module.vhd
 src gt_mp7_core/gtl_fdl_wrapper/gtl/p_m_2_bx_pipeline.vhd

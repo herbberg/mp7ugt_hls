@@ -185,12 +185,12 @@ def main():
         # Read generated VHDL snippets
         src_dir = os.path.join(args.menu, 'vhdl', module_name, 'src')
 
-        replace_map = {
+        #replace_map = {
             #'{{algo_index}}': tb.read_file(os.path.join(src_dir, 'algo_index.vhd')),
-            '{{ugt_constants}}': tb.read_file(os.path.join(src_dir, 'ugt_constants.vhd')),
+            #'{{ugt_constants}}': tb.read_file(os.path.join(src_dir, 'ugt_constants.vhd')),
             #'{{gtl_module_signals}}': tb.read_file(os.path.join(src_dir, 'gtl_module_signals.vhd')),
             #'{{gtl_module_instances}}': tb.read_file(os.path.join(src_dir, 'gtl_module_instances.vhd')),
-        }
+        #}
 
         gtl_fdl_wrapper_dir = os.path.join(local_fw_dir, 'firmware', 'hdl', 'gt_mp7_core', 'gtl_fdl_wrapper')
         gtl_dir = os.path.join(gtl_fdl_wrapper_dir, 'gtl')
@@ -198,8 +198,11 @@ def main():
 
         # Patch VHDL files
         #tb.template_replace(os.path.join(fdl_dir, 'algo_mapping_rop_tpl.vhd'), replace_map, os.path.join(fdl_dir, 'algo_mapping_rop.vhd'))
-        tb.template_replace(os.path.join(gtl_dir, 'gtl_pkg_tpl.vhd'), replace_map, os.path.join(gtl_dir, 'gtl_pkg.vhd'))
+        #tb.template_replace(os.path.join(gtl_dir, 'gtl_pkg_tpl.vhd'), replace_map, os.path.join(gtl_dir, 'constants_pkg.vhd'))
         #tb.template_replace(os.path.join(gtl_dir, 'gtl_module_tpl.vhd'), replace_map, os.path.join(gtl_dir, 'gtl_module.vhd'))
+        
+        # Copy constants_pkg.vhd from "menu" (HLS)
+        shutil.copyfile(os.path.join(src_dir, 'constants_pkg.vhd'), os.path.join(gtl_dir, 'constants_pkg.vhd'))
 
         # Run project manager
         subprocess.check_call(['python', 'ProjectManager.py', 'vivado', local_fw_dir, '-w', module_dir])
@@ -209,7 +212,7 @@ def main():
         #
         os.chdir(module_dir)
         #set_prop = "set_property ip_repo_paths %s", args.hls, "[current_project]\n"
-        hls_ip_file = open(args.tclfile,"w+")
+        hls_ip_file = open(args.tclfile,"w")
         hls_ip_file.write("open_project top/top.xpr\n")
         hls_ip_file.write("set_property ip_repo_paths ")
         hls_ip_file.write(args.hls)
