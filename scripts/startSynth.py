@@ -10,7 +10,7 @@ import logging
 import ConfigParser
 import sys, os, re
 
-VIVADO_BASE_DIR_DEAULT = '/opt/xilinx/Vivado'
+VIVADO_BASE_DIR_DEFAULT = '/opt/xilinx/Vivado'
 """Default Xilinx Vivado installation location."""
 
 EXIT_SUCCESS = 0
@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('vivado', type=vivado_t, help="xilinx vivado version to run, eg. '2016.4'")
     parser.add_argument('config', type=os.path.abspath, help="build configuration file to read")
     parser.add_argument('--tclfile', default=Tcl_addHlsIpCore, help="file name tcl script for HLS IP core")
-    parser.add_argument('--vivado_base_dir', default=VIVADO_BASE_DIR_DEAULT, help="Xilinx Vivado installation location, eg. '/opt/xilinx/Vivado'")
+    parser.add_argument('--vivado_base_dir', default=VIVADO_BASE_DIR_DEFAULT, help="default Xilinx Vivado installation location")
     return parser.parse_args()
 
 def main():
