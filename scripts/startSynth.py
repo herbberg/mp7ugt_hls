@@ -10,7 +10,7 @@ import logging
 import ConfigParser
 import sys, os, re
 
-VIVADO_BASE_DIR = '/opt/xilinx/Vivado'
+VIVADO_BASE_DIR_DEAULT = '/opt/xilinx/Vivado'
 """Default Xilinx Vivado installation location."""
 
 EXIT_SUCCESS = 0
@@ -35,6 +35,7 @@ def parse_args():
     parser.add_argument('vivado', type=vivado_t, help="xilinx vivado version to run, eg. '2016.4'")
     parser.add_argument('config', type=os.path.abspath, help="build configuration file to read")
     parser.add_argument('--tclfile', default=Tcl_addHlsIpCore, help="file name tcl script for HLS IP core")
+    parser.add_argument('--vivado_base_dir', default=VIVADO_BASE_DIR_DEAULT, help="Xilinx Vivado installation location, eg. '/opt/xilinx/Vivado'")
     return parser.parse_args()
 
 def main():
@@ -64,7 +65,7 @@ def main():
     logging.info("preparing to start synthesis for menu '%s' ...", menu)
 
     # settings filename
-    settings64 = os.path.join(VIVADO_BASE_DIR, args.vivado, 'settings64.sh')
+    settings64 = os.path.join(args.vivado_base_dir, args.vivado, 'settings64.sh')
     if not os.path.isfile(settings64):
         raise RuntimeError(
             "no such Xilinx Vivado settings file '{settings64}'\n" \
