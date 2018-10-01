@@ -3,6 +3,7 @@
 
 -- Version-history:
 -- HB 2018-08-23: version for use with HLS generated code. Inserted instance of IP core from HLS.
+-- HB 2018-08-06: v1.6.0: Added ports and pipelines for "Asymmetry" (asymet_data, ...) and "Centrality" (centrality_data).
 -- HB 2017-10-06: v1.5.0: Used new modules for use of std_logic_vector for limits of correlation cuts 
 -- HB 2017-09-15: v1.4.1: Bug fix in calo_calo_correlation_condition_v3.vhd
 -- HB 2017-09-08: v1.4.0: Updated modules for correct use of object slices
@@ -28,7 +29,6 @@ use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 
 use work.gtl_pkg.all;
-use work.gt_mp7_core_pkg.all;
 
 entity gtl_module is
     port(
@@ -52,14 +52,21 @@ entity gtl_module is
 -- HB 2016-09-16: inserted HTMHF and TOWERCNT
         htmhf_data : in std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
         towercount_data : in std_logic_vector(MAX_TOWERCOUNT_BITS-1 downto 0);
+-- HB 2018-08-06: inserted signals for "Asymmetry" and "Centrality" (included in esums data structure).
+        asymet_data : in std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+        asymht_data : in std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+        asymethf_data : in std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+        asymhthf_data : in std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+        centrality_data : in std_logic_vector(NR_CENTRALITY_BITS-1 downto 0);
 -- ****************************************************************************************
         muon_data : in muon_objects_array(0 to NR_MUON_OBJECTS-1);
         external_conditions : in std_logic_vector(NR_EXTERNAL_CONDITIONS-1 downto 0);
-        algo_o : out std_logic_vector(MAX_NR_ALGOS-1 downto 0));
+        algo_o : out std_logic_vector(NR_ALGOS-1 downto 0));
 end gtl_module;
 
 architecture rtl of gtl_module is
     constant external_conditions_pipeline_stages: natural := 2; -- pipeline stages for "External conditions" to get same pipeline to algos as conditions
+    constant centrality_bits_pipeline_stages: natural := 2; -- pipeline stages for "Centrality" to get same pipeline to algos as conditions
 
 -- HB 2016-03-08: "workaraound" for VHDL-Producer output
     constant NR_MU_OBJECTS: positive := NR_MUON_OBJECTS;
@@ -85,6 +92,13 @@ architecture rtl of gtl_module is
 -- HB 2016-09-16: inserted HTMHF and TOWERCNT
     signal htmhf_bx_p2, htmhf_bx_p1, htmhf_bx_0, htmhf_bx_m1, htmhf_bx_m2 : std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
     signal towercount_bx_p2, towercount_bx_p1, towercount_bx_0, towercount_bx_m1, towercount_bx_m2 : std_logic_vector(MAX_TOWERCOUNT_BITS-1 downto 0);
+-- HB 2018-08-06: inserted "Asymmetry" and "Centrality"
+    signal asymet_bx_p2, asymet_bx_p1, asymet_bx_0, asymet_bx_m1, asymet_bx_m2 : std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+    signal asymht_bx_p2, asymht_bx_p1, asymht_bx_0, asymht_bx_m1, asymht_bx_m2 : std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+    signal asymethf_bx_p2, asymethf_bx_p1, asymethf_bx_0, asymethf_bx_m1, asymethf_bx_m2 : std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+    signal asymhthf_bx_p2, asymhthf_bx_p1, asymhthf_bx_0, asymhthf_bx_m1, asymhthf_bx_m2 : std_logic_vector(MAX_ESUMS_BITS-1 downto 0);
+    signal centrality_bx_p2_int, centrality_bx_p1_int, centrality_bx_0_int, centrality_bx_m1_int, centrality_bx_m2_int : std_logic_vector(NR_CENTRALITY_BITS-1 downto 0);
+    signal centrality_bx_p2, centrality_bx_p1, centrality_bx_0, centrality_bx_m1, centrality_bx_m2 : std_logic_vector(NR_CENTRALITY_BITS-1 downto 0);
 -- ****************************************************************************************
 -- HB 2016-01-08: renamed ext_cond after +/-2bx to ext_cond_bx_p2_int, etc., because ext_cond_bx_p2, etc. used in algos (names coming from TME grammar).
     signal ext_cond_bx_p2_int, ext_cond_bx_p1_int, ext_cond_bx_0_int, ext_cond_bx_m1_int, ext_cond_bx_m2_int : std_logic_vector(NR_EXTERNAL_CONDITIONS-1 downto 0);
@@ -94,28 +108,6 @@ architecture rtl of gtl_module is
     signal a_i_1, algo_int_1, algo_int_2 : std_logic_vector(MAX_NR_ALGOS-1 downto 0) := (others => '0');
     type a_i_array is array (natural range <>) of std_logic_vector(0 downto 0);
     signal a_i : a_i_array(MAX_NR_ALGOS-1 downto 0) := (others => "0");
-
--- ========================================================
--- from VHDL producer:
-
--- Module ID: 0
-
--- Name of L1 Trigger Menu:
--- L1Menu_test_hls4gtl_v0_0_0
-
--- Unique ID of L1 Trigger Menu:
--- cd1e07d1-06f2-4bd4-aa58-2ddd1ff35fdf
-
--- Unique ID of firmware implementation:
--- e38348ac-aaa1-41f9-946c-137d4974e5fc
-
--- Scale set:
--- scales_2018_08_07
-
--- VHDL producer version
--- v2.5.0
-
--- ========================================================
 
 -- 2018-08-21: signals for IP "algo_0" from hls4gtl
 --     signal ap_rst : std_logic := '0'; -- always '0' for "not reseted"
@@ -137,83 +129,34 @@ p_m_2_bx_pipeline_i: entity work.p_m_2_bx_pipeline
         htm_data, htm_bx_p2, htm_bx_p1, htm_bx_0, htm_bx_m1, htm_bx_m2,
 -- ****************************************************************************************
 -- HB 2016-04-18: updates for "min bias trigger" objects (quantities) for Low-pileup-run May 2016
-	mbt1hfp_data, mbt1hfp_bx_p2, mbt1hfp_bx_p1, mbt1hfp_bx_0, mbt1hfp_bx_m1, mbt1hfp_bx_m2,
-	mbt1hfm_data, mbt1hfm_bx_p2, mbt1hfm_bx_p1, mbt1hfm_bx_0, mbt1hfm_bx_m1, mbt1hfm_bx_m2,
-	mbt0hfp_data, mbt0hfp_bx_p2, mbt0hfp_bx_p1, mbt0hfp_bx_0, mbt0hfp_bx_m1, mbt0hfp_bx_m2,
-	mbt0hfm_data, mbt0hfm_bx_p2, mbt0hfm_bx_p1, mbt0hfm_bx_0, mbt0hfm_bx_m1, mbt0hfm_bx_m2,
+        mbt1hfp_data, mbt1hfp_bx_p2, mbt1hfp_bx_p1, mbt1hfp_bx_0, mbt1hfp_bx_m1, mbt1hfp_bx_m2,
+        mbt1hfm_data, mbt1hfm_bx_p2, mbt1hfm_bx_p1, mbt1hfm_bx_0, mbt1hfm_bx_m1, mbt1hfm_bx_m2,
+        mbt0hfp_data, mbt0hfp_bx_p2, mbt0hfp_bx_p1, mbt0hfp_bx_0, mbt0hfp_bx_m1, mbt0hfp_bx_m2,
+        mbt0hfm_data, mbt0hfm_bx_p2, mbt0hfm_bx_p1, mbt0hfm_bx_0, mbt0hfm_bx_m1, mbt0hfm_bx_m2,
 -- HB 2016-06-07: inserted new esums quantities (ETTEM and ETMHF).
         ettem_data, ettem_bx_p2, ettem_bx_p1, ettem_bx_0, ettem_bx_m1, ettem_bx_m2,
         etmhf_data, etmhf_bx_p2, etmhf_bx_p1, etmhf_bx_0, etmhf_bx_m1, etmhf_bx_m2,
 -- HB 2016-09-16: inserted HTMHF and TOWERCNT
         htmhf_data, htmhf_bx_p2, htmhf_bx_p1, htmhf_bx_0, htmhf_bx_m1, htmhf_bx_m2,
         towercount_data, towercount_bx_p2, towercount_bx_p1, towercount_bx_0, towercount_bx_m1, towercount_bx_m2,
+-- HB 2018-08-06: inserted "Asymmetry" and "Centrality"
+        asymet_data, asymet_bx_p2, asymet_bx_p1, asymet_bx_0, asymet_bx_m1, asymet_bx_m2,
+        asymht_data, asymht_bx_p2, asymht_bx_p1, asymht_bx_0, asymht_bx_m1, asymht_bx_m2,
+        asymethf_data, asymethf_bx_p2, asymethf_bx_p1, asymethf_bx_0, asymethf_bx_m1, asymethf_bx_m2,
+        asymhthf_data, asymhthf_bx_p2, asymhthf_bx_p1, asymhthf_bx_0, asymhthf_bx_m1, asymhthf_bx_m2,
+        centrality_data, centrality_bx_p2_int, centrality_bx_p1_int, centrality_bx_0_int, centrality_bx_m1_int, centrality_bx_m2_int,
 -- ****************************************************************************************
 -- HB 2016-01-08: renamed ext_cond after +/-2bx to ext_cond_bx_p2_int, etc., because ext_cond_bx_p2, etc. used in algos (names coming from TME grammar).
         external_conditions, ext_cond_bx_p2_int, ext_cond_bx_p1_int, ext_cond_bx_0_int, ext_cond_bx_m1_int, ext_cond_bx_m2_int
     );
 
--- Parameterized pipeline stages for External conditions, actually 2 stages (fixed) in conditions, see "constant external_conditions_pipeline_stages ..."
--- HB 2016-01-08: renamed ext_cond after +/-2bx to ext_cond_bx_p2_int, etc., because ext_cond_bx_p2, etc. used in algos (names coming from TME grammar).
-ext_cond_pipe_p: process(lhc_clk, ext_cond_bx_p2_int, ext_cond_bx_p1_int, ext_cond_bx_0_int, ext_cond_bx_m1_int, ext_cond_bx_m2_int)
-    type ext_cond_pipe_array is array (0 to external_conditions_pipeline_stages+1) of std_logic_vector(NR_EXTERNAL_CONDITIONS-1 downto 0);
-    variable ext_cond_bx_p2_pipe_temp : ext_cond_pipe_array := (others => (others => '0'));
-    variable ext_cond_bx_p1_pipe_temp : ext_cond_pipe_array := (others => (others => '0'));
-    variable ext_cond_bx_0_pipe_temp : ext_cond_pipe_array := (others => (others => '0'));
-    variable ext_cond_bx_m1_pipe_temp : ext_cond_pipe_array := (others => (others => '0'));
-    variable ext_cond_bx_m2_pipe_temp : ext_cond_pipe_array := (others => (others => '0'));
-    begin
-        ext_cond_bx_p2_pipe_temp(external_conditions_pipeline_stages+1) := ext_cond_bx_p2_int;
-        ext_cond_bx_p1_pipe_temp(external_conditions_pipeline_stages+1) := ext_cond_bx_p1_int;
-        ext_cond_bx_0_pipe_temp(external_conditions_pipeline_stages+1) := ext_cond_bx_0_int;
-        ext_cond_bx_m1_pipe_temp(external_conditions_pipeline_stages+1) := ext_cond_bx_m1_int;
-        ext_cond_bx_m2_pipe_temp(external_conditions_pipeline_stages+1) := ext_cond_bx_m2_int;
-        if (external_conditions_pipeline_stages > 0) then 
-            if (lhc_clk'event and (lhc_clk = '1') ) then
-                ext_cond_bx_p2_pipe_temp(0 to external_conditions_pipeline_stages) := ext_cond_bx_p2_pipe_temp(1 to external_conditions_pipeline_stages+1);
-                ext_cond_bx_p1_pipe_temp(0 to external_conditions_pipeline_stages) := ext_cond_bx_p1_pipe_temp(1 to external_conditions_pipeline_stages+1);
-                ext_cond_bx_0_pipe_temp(0 to external_conditions_pipeline_stages) := ext_cond_bx_0_pipe_temp(1 to external_conditions_pipeline_stages+1);
-                ext_cond_bx_m1_pipe_temp(0 to external_conditions_pipeline_stages) := ext_cond_bx_m1_pipe_temp(1 to external_conditions_pipeline_stages+1);
-                ext_cond_bx_m2_pipe_temp(0 to external_conditions_pipeline_stages) := ext_cond_bx_m2_pipe_temp(1 to external_conditions_pipeline_stages+1);
-            end if;
-        end if;
-        ext_cond_bx_p2 <= ext_cond_bx_p2_pipe_temp(1); -- used pipe_temp(1) instead of pipe_temp(0), to prevent warnings in compilation
-        ext_cond_bx_p1 <= ext_cond_bx_p1_pipe_temp(1);
-        ext_cond_bx_0 <= ext_cond_bx_0_pipe_temp(1);
-        ext_cond_bx_m1 <= ext_cond_bx_m1_pipe_temp(1);
-        ext_cond_bx_m2 <= ext_cond_bx_m2_pipe_temp(1);
-end process;
-
--- ========================================================
--- from VHDL producer:
-
--- Module ID: 0
-
--- Name of L1 Trigger Menu:
--- L1Menu_test_hls4gtl_v0_0_0
-
--- Unique ID of L1 Trigger Menu:
--- cd1e07d1-06f2-4bd4-aa58-2ddd1ff35fdf
-
--- Unique ID of firmware implementation:
--- e38348ac-aaa1-41f9-946c-137d4974e5fc
-
--- Scale set:
--- scales_2018_08_07
-
--- VHDL producer version
--- v2.5.0
-
--- ========================================================
--- IP from hls4gtl
+-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+-- IMPORTANT COMMENT:
+-- Processes for ext_cond_pipe_p and centrality_pipe_p not used, because HLS synthesis has latency = 0 (no intermediate registers!)
+-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 algos_i: entity work.algos_0
     port map(
---         lhc_clk,
---         ap_rst,
---         ap_start,
---         ap_done,
---         ap_idle,
---         ap_ready,
         eg_bx_0(0)(EG_ET_HIGH downto EG_ET_LOW),
         eg_bx_0(1)(EG_ET_HIGH downto EG_ET_LOW),
         eg_bx_0(2)(EG_ET_HIGH downto EG_ET_LOW),
@@ -238,6 +181,31 @@ algos_i: entity work.algos_0
         eg_bx_0(9)(EG_ETA_HIGH downto EG_ETA_LOW),
         eg_bx_0(10)(EG_ETA_HIGH downto EG_ETA_LOW),
         eg_bx_0(11)(EG_ETA_HIGH downto EG_ETA_LOW),
+        eg_bx_0(0)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(1)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(2)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(3)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(4)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(5)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(6)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(7)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(8)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(9)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(10)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(11)(EG_PHI_HIGH downto EG_PHI_LOW),
+        eg_bx_0(0)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(1)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(2)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(3)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(4)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(5)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(6)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(7)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(8)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(9)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(10)(EG_ISO_HIGH downto EG_ISO_LOW),
+        eg_bx_0(11)(EG_ISO_HIGH downto EG_ISO_LOW),
+
         jet_bx_0(0)(JET_ET_HIGH downto JET_ET_LOW),
         jet_bx_0(1)(JET_ET_HIGH downto JET_ET_LOW),
         jet_bx_0(2)(JET_ET_HIGH downto JET_ET_LOW),
@@ -262,6 +230,125 @@ algos_i: entity work.algos_0
         jet_bx_0(9)(JET_ETA_HIGH downto JET_ETA_LOW),
         jet_bx_0(10)(JET_ETA_HIGH downto JET_ETA_LOW),
         jet_bx_0(11)(JET_ETA_HIGH downto JET_ETA_LOW),
+        jet_bx_0(0)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(1)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(2)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(3)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(4)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(5)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(6)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(7)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(8)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(9)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(10)(JET_PHI_HIGH downto JET_PHI_LOW),
+        jet_bx_0(11)(JET_PHI_HIGH downto JET_PHI_LOW),
+
+        tau_bx_0(0)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(1)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(2)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(3)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(4)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(5)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(6)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(7)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(8)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(9)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(10)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(11)(TAU_ET_HIGH downto TAU_ET_LOW),
+        tau_bx_0(0)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(1)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(2)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(3)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(4)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(5)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(6)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(7)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(8)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(9)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(10)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(11)(TAU_ETA_HIGH downto TAU_ETA_LOW),
+        tau_bx_0(0)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(1)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(2)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(3)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(4)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(5)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(6)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(7)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(8)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(9)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(10)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(11)(TAU_PHI_HIGH downto TAU_PHI_LOW),
+        tau_bx_0(0)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(1)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(2)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(3)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(4)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(5)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(6)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(7)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(8)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(9)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(10)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        tau_bx_0(11)(TAU_ISO_HIGH downto TAU_ISO_LOW),
+        
+        muon_bx_0(0)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(1)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(2)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(3)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(4)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(5)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(6)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(7)(MUON_PHI_HIGH downto MUON_PHI_LOW),
+        muon_bx_0(0)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(1)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(2)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(3)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(4)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(5)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(6)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(7)(MUON_PT_HIGH downto MUON_PT_LOW),
+        muon_bx_0(0)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(1)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(2)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(3)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(4)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(5)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(6)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(7)(MUON_QUAL_HIGH downto MUON_QUAL_LOW),
+        muon_bx_0(0)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(1)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(2)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(3)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(4)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(5)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(6)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(7)(MUON_ETA_HIGH downto MUON_ETA_LOW),
+        muon_bx_0(0)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(1)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(2)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(3)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(4)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(5)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(6)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(7)(MUON_ISO_HIGH downto MUON_ISO_LOW),
+        muon_bx_0(0)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        muon_bx_0(1)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        muon_bx_0(2)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        muon_bx_0(3)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        muon_bx_0(4)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        muon_bx_0(5)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        muon_bx_0(6)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        muon_bx_0(7)(MUON_CHARGE_HIGH downto MUON_CHARGE_LOW),
+        
+        asymet_bx_0(ASYMET_HIGH downto ASYMET_LOW),
+        asymht_bx_0(ASYMHT_HIGH downto ASYMHT_LOW),
+        asymethf_bx_0(ASYMETHF_HIGH downto ASYMETHF_LOW),
+        asymhthf_bx_0(ASYMHTHF_HIGH downto ASYMHTHF_LOW),
+        
+        centrality_bx_0_int, -- no intermediate registers in HLS
+        ext_cond_bx_0_int, -- no intermediate registers in HLS
+        
         a_i(0), a_i(1), a_i(2), a_i(3), a_i(4), a_i(5), a_i(6), a_i(7), a_i(8), a_i(9), 
         a_i(10), a_i(11), a_i(12), a_i(13), a_i(14), a_i(15), a_i(16), a_i(17), a_i(18), a_i(19), 
         a_i(20), a_i(21), a_i(22), a_i(23), a_i(24), a_i(25), a_i(26), a_i(27), a_i(28), a_i(29), 

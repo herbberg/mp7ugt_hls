@@ -2,6 +2,7 @@
 -- Package for constant and type definitions of GTL firmware in Global Trigger Upgrade system.
 
 -- HB 2018-08-23: version for use with HLS generated code. Removed unused definitions.
+-- HB 2018-08-06: inserted types and constants for "Asymmetry" (asymet_data, ...) and "Centrality" (centrality_data).
 -- HB 2017-10-02: inserted constant MAX_WIDTH_DETA_DPHI_LIMIT_VECTOR and MAX_WIDTH_DR_LIMIT_VECTOR.
 -- HB 2017-09-29: inserted constant MAX_WIDTH_MASS_LIMIT_VECTOR and MAX_WIDTH_TBPT_LIMIT_VECTOR.
 -- HB 2017-09-05: inserted constant MAX_CALO_OBJECTS.
@@ -225,6 +226,78 @@ constant HTMHF_PHI_LOW : natural := 12;
 constant HTMHF_PHI_HIGH : natural := 19;
 constant D_S_I_HTMHF : d_s_i_htmhf_record := (HTMHF_PHI_HIGH,HTMHF_PHI_LOW,HTMHF_ET_HIGH,HTMHF_ET_LOW);
 constant D_S_I_HTMHF_V2 : d_s_i_htmhf_record := D_S_I_HTMHF; -- dummy for VHDL-Producer output (correlation conditions)
+
+--- HB 2018-08-06: inserted constants and types for "Asymmetry" and "Centrality" (included in esums data structure).
+-- see: https://indico.cern.ch/event/746381/contributions/3085360/subcontributions/260912/attachments/1693846/2725976/DemuxOutput.pdf
+
+-- Frame 2, ETM: bits 27..20 => ASYMET
+-- Frame 3, HTM: bits 27..20 => ASYMHT
+-- Frame 4, ETMHF: bits 27..20 => ASYMETHF
+-- Frame 5, HTMHF: bits 27..20 => ASYMHTHF
+
+-- Frame 4, ETMHF: bits 31..28 => CENT3..CENT0
+-- Frame 5, HTMHF: bits 31..28 => CENT7..CENT4
+
+constant ASYMET_IN_ETM_HIGH : natural := 27;
+constant ASYMET_IN_ETM_LOW : natural := 20;
+constant ASYMHT_IN_HTM_HIGH : natural := 27;
+constant ASYMHT_IN_HTM_LOW : natural := 20;
+constant ASYMETHF_IN_ETMHF_HIGH : natural := 27;
+constant ASYMETHF_IN_ETMHF_LOW : natural := 20;
+constant ASYMHTHF_IN_HTMHF_HIGH : natural := 27;
+constant ASYMHTHF_IN_HTMHF_LOW : natural := 20;
+
+constant MAX_ASYM_BITS : positive range 1 to 8 := 8;
+constant MAX_ASYM_TEMPLATES_BITS : positive range 1 to MAX_ASYM_BITS := 8;
+
+-- Type definitions for "Asymmetry"
+type d_s_i_asymet_record is record
+    high, low : natural range MAX_ASYM_BITS-1 downto 0;
+end record d_s_i_asymet_record;
+
+type d_s_i_asymht_record is record
+    high, low : natural range MAX_ASYM_BITS-1 downto 0;
+end record d_s_i_asymht_record;
+
+type d_s_i_asymethf_record is record
+    high, low : natural range MAX_ASYM_BITS-1 downto 0;
+end record d_s_i_asymethf_record;
+
+type d_s_i_asymhthf_record is record
+    high, low : natural range MAX_ASYM_BITS-1 downto 0;
+end record d_s_i_asymhthf_record;
+
+constant ASYMET_LOW : natural := 0;
+constant ASYMET_HIGH : natural := 7;
+constant D_S_I_ASYMET : d_s_i_asymet_record := (ASYMET_HIGH,ASYMET_LOW);
+
+constant ASYMHT_LOW : natural := 0;
+constant ASYMHT_HIGH : natural := 7;
+constant D_S_I_ASYMHT : d_s_i_asymht_record := (ASYMHT_HIGH,ASYMHT_LOW);
+
+constant ASYMETHF_LOW : natural := 0;
+constant ASYMETHF_HIGH : natural := 7;
+constant D_S_I_ASYMETHF : d_s_i_asymethf_record := (ASYMETHF_HIGH,ASYMETHF_LOW);
+
+constant ASYMHTHF_LOW : natural := 0;
+constant ASYMHTHF_HIGH : natural := 7;
+constant D_S_I_ASYMHTHF : d_s_i_asymhthf_record := (ASYMHTHF_HIGH,ASYMHTHF_LOW);
+
+-- *******************************************************************************************************
+-- Type definitions for "Centrality"
+constant CENT_IN_ETMHF_HIGH : natural := 31;
+constant CENT_IN_ETMHF_LOW : natural := 28;
+constant CENT_IN_HTMHF_HIGH : natural := 31;
+constant CENT_IN_HTMHF_LOW : natural := 28;
+
+constant CENT_LBITS_LOW : natural := 0;
+constant CENT_LBITS_HIGH: natural := 3;
+constant CENT_UBITS_LOW : natural := 4;
+constant CENT_UBITS_HIGH: natural := 7;
+
+constant NR_CENTRALITY_BITS : positive := CENT_UBITS_HIGH-CENT_LBITS_LOW+1;
+
+-- *******************************************************************************************************
 -- HB 2016-09-16: inserted TOWERCOUNT
 constant TOWERCOUNT_IN_HTT_LOW : natural := 12;
 constant TOWERCOUNT_IN_HTT_HIGH : natural := 24;
