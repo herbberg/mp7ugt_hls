@@ -90,21 +90,21 @@ def main():
     os.system('pwd')
     
     os.system('python manage.py init {menu_dir} {args.module}'.format(**locals()))
+    #print ''
+    #print '====================================================='
+    #print 'simulation started'
+    #print '====================================================='
+    #print ''
+    #os.system('python manage.py csim')
+    #print ''
+    #print '====================================================='
+    #print 'synthesis started'
+    #print '====================================================='
+    #print ''
+    #os.system('python manage.py csynth')
     print ''
     print '====================================================='
-    print 'simulation started'
-    print '====================================================='
-    print ''
-    os.system('python manage.py csim')
-    print ''
-    print '====================================================='
-    print 'synthesis started'
-    print '====================================================='
-    print ''
-    os.system('python manage.py csynth')
-    print ''
-    print '====================================================='
-    print 'co-simulation started'
+    print 'simulation, synthesis and co-simulation started'
     print '====================================================='
     print ''
     # synthesis auto run with co-simulation !!!
