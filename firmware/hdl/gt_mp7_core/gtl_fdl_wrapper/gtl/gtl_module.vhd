@@ -61,7 +61,7 @@ entity gtl_module is
 -- ****************************************************************************************
         muon_data : in muon_objects_array(0 to NR_MUON_OBJECTS-1);
         external_conditions : in std_logic_vector(NR_EXTERNAL_CONDITIONS-1 downto 0);
-        algo_o : out std_logic_vector(NR_ALGOS-1 downto 0));
+        algo_o : out std_logic_vector(MAX_NR_ALGOS-1 downto 0));
 end gtl_module;
 
 architecture rtl of gtl_module is
@@ -104,7 +104,6 @@ architecture rtl of gtl_module is
     signal ext_cond_bx_p2_int, ext_cond_bx_p1_int, ext_cond_bx_0_int, ext_cond_bx_m1_int, ext_cond_bx_m2_int : std_logic_vector(NR_EXTERNAL_CONDITIONS-1 downto 0);
     signal ext_cond_bx_p2, ext_cond_bx_p1, ext_cond_bx_0, ext_cond_bx_m1, ext_cond_bx_m2 : std_logic_vector(NR_EXTERNAL_CONDITIONS-1 downto 0);
 
---    signal algo, algo_int, algo_int_1, algo_int_2 : std_logic_vector(NR_ALGOS-1 downto 0) := (others => '0');
     signal a_i_1, algo_int_1, algo_int_2 : std_logic_vector(MAX_NR_ALGOS-1 downto 0) := (others => '0');
     type a_i_array is array (natural range <>) of std_logic_vector(0 downto 0);
     signal a_i : a_i_array(MAX_NR_ALGOS-1 downto 0) := (others => "0");

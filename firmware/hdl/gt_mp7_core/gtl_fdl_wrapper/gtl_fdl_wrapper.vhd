@@ -62,7 +62,7 @@ end gtl_fdl_wrapper;
 
 architecture rtl of gtl_fdl_wrapper is
 
-    signal algo : std_logic_vector(nr_algos-1 downto 0);
+    signal algo : std_logic_vector(MAX_NR_ALGOS-1 downto 0);
 
     signal eg_internal : calo_objects_array(0 to NR_EG_OBJECTS-1);
     signal jet_internal : calo_objects_array(0 to NR_JET_OBJECTS-1);
