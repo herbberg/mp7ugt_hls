@@ -62,16 +62,17 @@ def main():
     
     settings64_1 = os.path.join(vivado_base_dir_1, args.vivado, 'settings64.sh')
     settings64_2 = os.path.join(vivado_base_dir_2, args.vivado, 'settings64.sh')
-    if not os.path.isfile(settings64_1) and not os.path.isfile(settings64_2):
+    if os.path.isfile(settings64_1):
+        settings64 = settings64_1
+    elif os.path.isfile(settings64_2):
+        settings64 = settings64_2        
+    else:
         raise RuntimeError(
-            "no such Xilinx Vivado settings file '{settings64_1}' or '{settings64_2}'\n" \
+            "no such Xilinx Vivado settings file '{settings64_1} or {settings64_2}'\n" \
             "  check if Xilinx Vivado {args.vivado} is installed on this machine.".format(**locals())
         )
-
     home = os.environ['HOME']
 
-    # Parse command line arguments.
-    args = parse_args()
     menu_dir = '{home}/{args.menupath}/{args.menuname}'.format(**locals())
     work_dir = '{home}/{args.builddir}/{args.menuname}'.format(**locals())
     
