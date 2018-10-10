@@ -32,6 +32,11 @@ DefaultMp7FwTag = 'mp7fw_v2_4_1'
 vivado_base_dir_1 = '/opt/xilinx/Vivado'
 vivado_base_dir_2 = '/opt/Xilinx/Vivado'
 
+def run_command(*args):
+    command = ' '.join(args)
+    logging.info(">$ %s", command)
+    os.system(command)
+
 def vivado_t(version):
     """Validates Xilinx Vivado version number."""
     if not re.match(r'^\d{4}\.\d+$', version):
@@ -72,6 +77,9 @@ def main():
             "  check if Xilinx Vivado {args.vivado} is installed on this machine.".format(**locals())
         )
 
+    #source_vivado = 'bash -c "source {settings64}"'.format(**locals())
+    #run_command(source_vivado)
+    
     home = os.environ['HOME']
 
     menu_dir = '{home}/{args.menupath}/{args.menuname}'.format(**locals())
