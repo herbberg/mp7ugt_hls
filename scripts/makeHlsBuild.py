@@ -46,6 +46,7 @@ def parse_args():
     parser.add_argument('builddir', help="build directory for HLS and FW synthesis")
     parser.add_argument('menupath', help="L1Menu directory path")
     parser.add_argument('menuname', help="L1Menu directory name")
+    #parser.add_argument('testvector', help='testvector file name')
     parser.add_argument('-v', '--vivado', type=vivado_t, default=DefaultVivadoVersion, help='xilinx vivado version to run (default: 2018.2)')
     parser.add_argument('-m', '--module', default=DefaultNrModules, help="MP7 module ID (default: 0)")
     parser.add_argument('-t', '--tag', metavar='<tag>', default=DefaultMp7FwTag, help="mp7fw tag (default: DefaultMp7FwTag)")
@@ -70,57 +71,52 @@ def main():
             "no such Xilinx Vivado settings file '{settings64_1} or {settings64_2}'\n" \
             "  check if Xilinx Vivado {args.vivado} is installed on this machine.".format(**locals())
         )
+
     home = os.environ['HOME']
 
     menu_dir = '{home}/{args.menupath}/{args.menuname}'.format(**locals())
     work_dir = '{home}/{args.builddir}/{args.menuname}'.format(**locals())
-    
-    vivado_sourced = raw_input('Is Vivado sourced? [y/n]: ')
-    print(vivado_sourced) 
-    if vivado_sourced == 'y':
-
-        print '====================================================='
-        print 'Menu directory: {menu_dir}'.format(**locals())
-        print 'Build directory: {work_dir}'.format(**locals())
-        print 'Vivado version: {args.vivado}'.format(**locals())
-        print 'MP7 FW tag: {args.tag}'.format(**locals())
-        print 'Build version: {args.build}'.format(**locals())
-        print 'Module ID: {args.module}'.format(**locals())
-        print '====================================================='
-        print ''
-
-        os.system('git clone https://github.com/herbberg/hls4gtl {work_dir}/hls4gtl'.format(**locals()))
-        os.system('git clone https://github.com/herbberg/mp7ugt_hls {work_dir}/mp7ugt_hls'.format(**locals()))
-        os.chdir('{work_dir}/hls4gtl'.format(**locals()))
         
-        os.system('python manage.py init {menu_dir} {args.module}'.format(**locals()))
-        print ''
-        print '====================================================='
-        print 'simulation, synthesis and co-simulation started'
-        print '====================================================='
-        print ''
-        # synthesis auto run with co-simulation !!!
-        os.system('python manage.py cosim')
-        print ''
-        print '====================================================='
-        print 'IP export started'
-        print '====================================================='
-        print ''
-        os.system('python manage.py export')
-        print ''
-        print '====================================================='
-        print 'Make Vivado project started'
-        print '====================================================='
-        print ''
-        os.system('python {work_dir}/mp7ugt_hls/scripts/makeProject.py -t {args.tag} -u {args.user} -b 0x{args.build} -m {menu_dir} --hls {work_dir}/hls4gtl/hls_impl/solution1/impl/ip -p {work_dir}/work'.format(**locals()))
-        print ''
-        print '====================================================='
-        print 'Vivado synthesis started'
-        print '====================================================='
-        print ''
-        os.system('python {work_dir}/mp7ugt_hls/scripts/startSynth.py {args.vivado} {work_dir}/work/mp7_ugt/0x{args.build}/mp7fw_v2_4_1/build/build_0x{args.build}.cfg'.format(**locals()))
-    else:
-        print('Source Vivado with "source {settings64}" and execute script again'.format(**locals())) 
+    print '====================================================='
+    print 'Menu directory: {menu_dir}'.format(**locals())
+    print 'Build directory: {work_dir}'.format(**locals())
+    print 'Vivado version: {args.vivado}'.format(**locals())
+    print 'MP7 FW tag: {args.tag}'.format(**locals())
+    print 'Build version: {args.build}'.format(**locals())
+    print 'Module ID: {args.module}'.format(**locals())
+    print '====================================================='
+    print ''
+
+    os.system('git clone https://github.com/herbberg/hls4gtl {work_dir}/hls4gtl'.format(**locals()))
+    os.system('git clone https://github.com/herbberg/mp7ugt_hls {work_dir}/mp7ugt_hls'.format(**locals()))
+    os.chdir('{work_dir}/hls4gtl'.format(**locals()))
+    
+    os.system('python manage.py init {menu_dir} {args.module}'.format(**locals()))
+    print ''
+    print '====================================================='
+    print 'simulation, synthesis and co-simulation started'
+    print '====================================================='
+    print ''
+    # synthesis auto run with co-simulation !!!
+    os.system('python manage.py cosim')
+    print ''
+    print '====================================================='
+    print 'IP export started'
+    print '====================================================='
+    print ''
+    os.system('python manage.py export')
+    print ''
+    print '====================================================='
+    print 'Make Vivado project started'
+    print '====================================================='
+    print ''
+    os.system('python {work_dir}/mp7ugt_hls/scripts/makeProject.py -t {args.tag} -u {args.user} -b 0x{args.build} -m {menu_dir} --hls {work_dir}/hls4gtl/hls_impl/solution1/impl/ip -p {work_dir}/work'.format(**locals()))
+    print ''
+    print '====================================================='
+    print 'Vivado synthesis started'
+    print '====================================================='
+    print ''
+    os.system('python {work_dir}/mp7ugt_hls/scripts/startSynth.py {args.vivado} {work_dir}/work/mp7_ugt/0x{args.build}/mp7fw_v2_4_1/build/build_0x{args.build}.cfg'.format(**locals()))
    
 if __name__ == '__main__':
     try:
