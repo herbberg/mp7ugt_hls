@@ -37,6 +37,8 @@ def parse_args():
     parser.add_argument('config', type=os.path.abspath, help="build configuration file to read")
     parser.add_argument('--tclfile', default=Tcl_addHlsIpCore, help="file name tcl script for HLS IP core")
     parser.add_argument('--vivado_base_dir', help="Xilinx Vivado installation location")
+    parser.add_argument('--screen', default='yes', help="use screen ('yes'[default] or 'no'")
+    
     return parser.parse_args()
 
 def main():
@@ -83,15 +85,19 @@ def main():
         session = "build_{build}_{i}".format(**locals())
         # module build directory inside build area
         builddir = os.path.join(buildarea, 'module_{i}'.format(**locals()))
-        # command to be executed inside module screen session
-        #command = 'bash -c "source {settings64}; cd {builddir}; make project && make bitfile"'.format(**locals())
+        # command to be executed inside module screen session or without screen session
         command = 'bash -c "source {settings64}; cd {builddir}; make project && vivado -mode batch -source {args.tclfile} && make bitfile"'.format(**locals())
+        
+        if args.screen == 'yes':
         # run screen command
-        logging.info("starting screen session '%s' for module %s ...", session, i)
-        run_command('screen', '-dmS', session, command)
+            logging.info("starting screen session '%s' for module %s ...", session, i)
+            run_command('screen', '-dmS', session, command)
+        else:
+            run_command(command)
 
-    # list runnign screen sessions
-    run_command('screen', '-ls')
+    if args.screen == 'yes':
+    # list running screen sessions
+        run_command('screen', '-ls')
 
     logging.info("done.")
 

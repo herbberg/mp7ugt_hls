@@ -51,11 +51,9 @@ def parse_args():
     parser.add_argument('builddir', help="build directory for HLS and FW synthesis")
     parser.add_argument('menupath', help="L1Menu directory path")
     parser.add_argument('menuname', help="L1Menu directory name")
-    #parser.add_argument('testvector', help='testvector file name')
     parser.add_argument('-v', '--vivado', type=vivado_t, default=DefaultVivadoVersion, help='xilinx vivado version to run (default: 2018.2)')
     parser.add_argument('-m', '--module', default=DefaultNrModules, help="MP7 module ID (default: 0)")
     parser.add_argument('-t', '--tag', metavar='<tag>', default=DefaultMp7FwTag, help="mp7fw tag (default: DefaultMp7FwTag)")
-    parser.add_argument('-u', '--user', metavar='<username>', required=True, help="username for SVN")
     parser.add_argument('-b', '--build', metavar='<version>', required=True, type=tb.build_t, help='menu build version (eg. 0x1001)')
     return parser.parse_args()
 
@@ -100,32 +98,15 @@ def main():
     os.chdir('{work_dir}/hls4gtl'.format(**locals()))
     
     os.system('python manage.py init {menu_dir} {args.module}'.format(**locals()))
-    print ''
-    print '====================================================='
-    print 'simulation, synthesis and co-simulation started'
-    print '====================================================='
-    print ''
-    # synthesis auto run with co-simulation !!!
-    os.system('python manage.py cosim')
-    print ''
-    print '====================================================='
-    print 'IP export started'
-    print '====================================================='
-    print ''
-    os.system('python manage.py export')
-    print ''
-    print '====================================================='
-    print 'Make Vivado project started'
-    print '====================================================='
-    print ''
-    os.system('python {work_dir}/mp7ugt_hls/scripts/makeProject.py -t {args.tag} -u {args.user} -b 0x{args.build} -m {menu_dir} --hls {work_dir}/hls4gtl/hls_impl/solution1/impl/ip -p {work_dir}/work'.format(**locals()))
-    print ''
-    print '====================================================='
-    print 'Vivado synthesis started'
-    print '====================================================='
-    print ''
-    os.system('python {work_dir}/mp7ugt_hls/scripts/startSynth.py {args.vivado} {work_dir}/work/mp7_ugt/0x{args.build}/mp7fw_v2_4_1/build/build_0x{args.build}.cfg'.format(**locals()))
-   
+
+    session = "hls_0x{args.build}".format(**locals())
+    logging.info("starting screen session '%s' for HLS and FW synthesis ...", session)
+    
+    command = ('bash -c "python manage.py cosim; python manage.py export; python {work_dir}/mp7ugt_hls/scripts/makeProject.py -t {args.tag} -b 0x{args.build} -m {menu_dir} --hls {work_dir}/hls4gtl/hls_impl/solution1/impl/ip -p {work_dir}/work; python {work_dir}/mp7ugt_hls/scripts/startSynth.py {args.vivado} {work_dir}/work/mp7_ugt/0x{args.build}/mp7fw_v2_4_1/build/build_0x{args.build}.cfg --screen no"'.format(**locals()))    
+    run_command('screen', '-dmS', session, command)
+    # list running screen sessions
+    run_command('screen', '-ls')
+    
 if __name__ == '__main__':
     try:
         main()

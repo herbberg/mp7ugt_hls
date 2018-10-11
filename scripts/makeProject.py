@@ -30,6 +30,7 @@ DefaultBoardType = 'mp7xe_690'
 
 DefaultFirmwareDir = os.path.expanduser("~/work_vivado_hls/fwdir")
 """Default output directory for firmware builds."""
+DefaultMp7FwTag = 'mp7fw_v2_4_1'
 
 # Some other paths.
 scripts_dir = os.path.dirname(os.path.abspath(__file__))
@@ -44,12 +45,9 @@ Tcl_addHlsIpCore = 'addHlsIpCore.tcl'
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--tag', metavar='<tag>', required=True, help="mp7fw tag")
-    parser.add_argument('--unstable', action='store_true', help="use unstable tag (default is stable)")
-    parser.add_argument('-o', '--old', action='store_true', help="use the old ProjectManager.py commands")
+    parser.add_argument('-t', '--tag', metavar='<tag>', default=DefaultMp7FwTag, help="mp7fw tag")
     parser.add_argument('--board', metavar='<type>', default=DefaultBoardType, choices=BoardAliases.keys(), help="set board type (default is {})".format(DefaultBoardType))
-    parser.add_argument('-u', '--user', metavar='<username>', required=True, help="username for SVN")
-    parser.add_argument('-p', '--path', metavar='<path>', default=DefaultFirmwareDir, type=os.path.abspath, help="fw build path")
+    parser.add_argument('-p', '--path', metavar='<path>', required=True, type=os.path.abspath, help="fw build path")
     parser.add_argument('-m', '--menu', metavar='<menu>', required=True, type=os.path.abspath, help="path to L1Menu_ directory")
     parser.add_argument('-b', '--build', metavar='<version>', required=True, type=tb.build_t, help='menu build version (eg. 0x1001)')
     parser.add_argument('--tclfile', default=Tcl_addHlsIpCore, help="file name tcl script for HLS IP core")
@@ -86,8 +84,8 @@ def main():
         raise RuntimeError("Menu contains no modules")
 
     logging.info("Creating uGT build area...")
-    logging.info("tag: %s (%s)", args.tag, "unstable" if args.unstable else "stable")
-    logging.info("user: %s", args.user)
+    logging.info("tag: %s (%s)", args.tag, "stable")
+    #logging.info("user: %s", args.user)
     logging.info("path: %s", build_root)
     logging.info("menu file: %s", args.menu)
     logging.info("menu name: %s", menu_name)
@@ -101,7 +99,6 @@ def main():
         raise RuntimeError("menu directory does not exist: {}".format(args.menu))
 
     # MP7 tag path inside build root directry.
-    # mp7path: /home/user/work/fwdir/0x1234/mp7_v1_2_3
     mp7path = os.path.join(build_root, args.tag)
 
     #
@@ -113,47 +110,10 @@ def main():
     # Check out mp7fw
     os.chdir(mp7path)
 
-    logging.info("downloading project manager...")
-    filename = "ProjectManager.py"
-    # Remove existing file.
-    tb.remove(filename)
-    # Download file
-    release_mode = 'unstable' if args.unstable else 'stable'
-    url = "https://svnweb.cern.ch/trac/cactus/browser/tags/mp7/{release_mode}/firmware/{args.tag}/cactusupgrades/scripts/firmware/ProjectManager.py?format=txt".format(**locals())
-    logging.info("retrieving %s", url)
-    urllib.urlretrieve(url, filename)
-    tb.make_executable(filename)
-
-    # Pffff....
-    d = open(filename).read()
-    d = d.replace(', default=os.getlogin()', '')
-    with open(filename, 'wb') as fp:
-        fp.write(d)
-
-    logging.info("checkout MP7 base firmware...")
-    path = os.path.join('tags', 'mp7', 'unstable' if args.unstable else 'stable', 'firmware', args.tag)
-    if args.old:
-        subprocess.check_call(['python', 'ProjectManager.py', 'checkout', path, '-u', args.user])
-    else:
-        subprocess.check_call(['python', 'ProjectManager.py', 'create', path, '-u', args.user]) #changes in ProjectManager.py, have to differ between older and newer versions
-
-    # Remove unused boards
-    logging.info("removing unused boards...")
-    boards_dir = os.path.join(mp7path,'cactusupgrades', 'boards')
-    for board in os.listdir(boards_dir):
-        if board != 'mp7':
-            tb.remove(os.path.join(boards_dir, board))
-
-    #
-    # Patch downlaoded files
-    #
-    mp7patch.patch_all(os.path.join(mp7path,'cactusupgrades'))
-
-    os.chdir(mp7path)
-
-    #
-    #  Patching top VHDL
-    #
+    os.system('git clone https://github.com/herbberg/mp7fw_v2_4_1 {mp7path}'.format(**locals()))
+    
+    # Patching top VHDL
+    
     logging.info("patch the target package with current UNIX timestamp/username/hostname...")
     subprocess.check_call(['python', os.path.join(scripts_dir, 'pkgpatch.py'), '--build', args.build ,TARGET_PKG_TPL, TARGET_PKG])
 
@@ -185,22 +145,10 @@ def main():
         # Read generated VHDL snippets
         src_dir = os.path.join(args.menu, 'vhdl', module_name, 'src')
 
-        #replace_map = {
-            #'{{algo_index}}': tb.read_file(os.path.join(src_dir, 'algo_index.vhd')),
-            #'{{ugt_constants}}': tb.read_file(os.path.join(src_dir, 'ugt_constants.vhd')),
-            #'{{gtl_module_signals}}': tb.read_file(os.path.join(src_dir, 'gtl_module_signals.vhd')),
-            #'{{gtl_module_instances}}': tb.read_file(os.path.join(src_dir, 'gtl_module_instances.vhd')),
-        #}
-
         gtl_fdl_wrapper_dir = os.path.join(local_fw_dir, 'firmware', 'hdl', 'gt_mp7_core', 'gtl_fdl_wrapper')
         gtl_dir = os.path.join(gtl_fdl_wrapper_dir, 'gtl')
         fdl_dir = os.path.join(gtl_fdl_wrapper_dir, 'fdl')
 
-        # Patch VHDL files
-        #tb.template_replace(os.path.join(fdl_dir, 'algo_mapping_rop_tpl.vhd'), replace_map, os.path.join(fdl_dir, 'algo_mapping_rop.vhd'))
-        #tb.template_replace(os.path.join(gtl_dir, 'gtl_pkg_tpl.vhd'), replace_map, os.path.join(gtl_dir, 'constants_pkg.vhd'))
-        #tb.template_replace(os.path.join(gtl_dir, 'gtl_module_tpl.vhd'), replace_map, os.path.join(gtl_dir, 'gtl_module.vhd'))
-        
         # Copy constants_pkg.vhd from "menu" (HLS)
         shutil.copyfile(os.path.join(src_dir, 'constants_pkg.vhd'), os.path.join(gtl_dir, 'constants_pkg.vhd'))
 
@@ -248,7 +196,7 @@ def main():
 
     config.add_section('firmware')
     config.set('firmware', 'tag', args.tag)
-    config.set('firmware', 'stable', str(not args.unstable))
+    #config.set('firmware', 'stable', str(not args.unstable))
     config.set('firmware', 'type', FW_TYPE)
     config.set('firmware', 'buildarea', os.path.join(mp7path, build_area_dir, menu_name))
 
